@@ -47,26 +47,33 @@ const getBook = async (id) => {
 const scrapeNHentai = async (start_id, end_id, page) => {
 	let id = start_id;
 	const itemsPerPage = 1000;
+	const consecLimit = 20;
 	let isFinished = false;
 	while (!isFinished) {
 		console.log(`Page: ${page}`);
 		let json = { posts: [] };
 		let startId = id;
 		let numErrors = 0;
-		while (id < startId + itemsPerPage && id <= end_id) {
+		let consec_errors = 0;
+		while (id < startId + itemsPerPage && id <= end_id && !isFinished) {
 			try {
 				book = await axios.get(`https://nhentai.net/api/gallery/${id}`);
+				consec_errors = 0;
 				json.posts.push(book.data);
 				console.log(`id: ${id}`);
 			} catch (err) {
 				numErrors++;
+				consec_errors++;
+				if (consec_errors > consecLimit) {
+					isFinished = true;
+				}
 				console.log(err);
 			}
 			id++;
 		}
 
 		fs.writeFileSync(
-			`./json/${page}-${itemsPerPage}-nhentai.json`,
+			`./json/database/${page}-${itemsPerPage}-nhentai.json`,
 			JSON.stringify(json)
 		);
 
