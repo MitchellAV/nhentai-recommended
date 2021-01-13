@@ -161,12 +161,6 @@ console.log(
 	all_characters.length,
 	all_parodies.length
 );
-const ref_tags = [
-	...all_tags,
-	...all_artists,
-	...all_characters,
-	...all_parodies
-];
 const database1 = require("./json/10-1000-nhentai.json").posts;
 const database2 = require("./json/2-1000-nhentai.json").posts;
 const database3 = require("./json/3-1000-nhentai.json").posts;
@@ -174,40 +168,102 @@ const database4 = require("./json/4-1000-nhentai.json").posts;
 const database5 = require("./json/5-1000-nhentai.json").posts;
 const database6 = require("./json/6-1000-nhentai.json").posts;
 const database = [
-	...database1
-	// ...database2,
-	// ...database3,
-	// ...database4,
-	// ...database5,
-	// ...database6
+	...favorites,
+	...database1,
+	...database2,
+	...database3,
+	...database4,
+	...database5,
+	...database6
 ];
 
-app.get("/convert", async (req, res) => {
+const gen_ref_tags = (database) => {
+	let ref_tags = [];
+	for (let i = 0; i < database.length; i++) {
+		const book_tags = database[i].tags;
+		for (let j = 0; j < book_tags.length; j++) {
+			const tag = book_tags[j].name;
+			if (!ref_tags.includes(tag)) {
+				ref_tags.push(tag);
+			}
+		}
+	}
+
+	return ref_tags;
+};
+const ref_tags = gen_ref_tags(database);
+
+app.get("/recommend", async (req, res) => {
 	const filtered_fav = convertVector(favorites, ref_tags);
+	console.log("created filtered fav");
 	const fav_TF_IDF_Vectors = TF_IDF(filtered_fav, ref_tags);
-	// const filtered_database = convertVector(database, ref_tags);
-	// let user_pref = filtered_fav[0].vector;
-	// filtered_fav.forEach((book) => {
-	// 	user_pref = add(user_pref, book.vector);
-	// });
-	// let max = norm(user_pref);
-	// user_pref = user_pref.map((x) => x / max);
-	// console.log(user_pref.length, filtered_database.length);
-	// let recommend = [];
-	// filtered_database.forEach((book) => {
-	// 	let book_vector = book.vector;
-	// 	const user_norm = norm(user_pref);
-	// 	const book_norm = norm(book_vector);
-	// 	const dot_result = dot(user_pref, book_vector);
-	// 	const metric = dot_result / (user_norm * book_norm);
-	// 	recommend.push({ id: book.id, score: metric });
-	// });
-	// console.log("weights assigned");
-	// recommend.sort(function (a, b) {
-	// 	return b.score - a.score;
-	// });
-	// console.log("sorted");
-	res.json(fav_TF_IDF_Vectors);
+	console.log("created TF-IDF fav vectors");
+	const filtered_database = convertVector(database, ref_tags);
+	console.log("created filtered database");
+	let database_TF_IDF_Vectors;
+	try {
+		database_TF_IDF_Vectors = require("./database_TF_IDF_Vectors.json")
+			.list;
+	} catch (err) {
+		database_TF_IDF_Vectors = TF_IDF(filtered_database, ref_tags);
+		console.log("created TF-IDF database vectors");
+		const json = { list: database_TF_IDF_Vectors };
+		await fs.writeFile(
+			"./database_TF_IDF_Vectors.json",
+			JSON.stringify(json)
+		);
+	}
+
+	let user_pref = Array(fav_TF_IDF_Vectors[0].length).fill(0);
+	fav_TF_IDF_Vectors.forEach((vector) => {
+		user_pref = user_pref.map((e, i) => e + vector[i]);
+	});
+
+	let max = norm(user_pref);
+	user_pref = user_pref.map((x) => x / max);
+	console.log("created user pref");
+	const total = database_TF_IDF_Vectors.length;
+	let recommend = [];
+	database_TF_IDF_Vectors.forEach((vector, i) => {
+		const user_norm = norm(user_pref);
+		const book_norm = norm(vector);
+		const dot_result = dot(user_pref, vector);
+		const metric = dot_result / (user_norm * book_norm);
+		const id = filtered_database[i].id;
+		const num_pages = filtered_database[i].num_pages;
+		const num_favorites = filtered_database[i].num_favorites;
+
+		recommend.push({
+			id,
+			num_pages,
+			num_favorites,
+			url: `https://nhentai.net/g/${id}`,
+			score: metric
+		});
+		console.log(`Created ${i + 1}/${total}`);
+	});
+
+	const is_in_array = (array, target) => {
+		let found = false;
+		for (let i = 0; i < array.length; i++) {
+			const obj = array[i];
+			if (obj.id === target) {
+				return true;
+			}
+		}
+		return found;
+	};
+
+	recommend = recommend.filter((book) => !is_in_array(filtered_fav, book.id));
+
+	console.log(`Filtered recommended`);
+
+	console.log("weights assigned");
+	recommend.sort(function (a, b) {
+		return b.score - a.score;
+	});
+	console.log("sorted");
+	res.json(recommend);
 });
 
 app.listen(3000, console.log("Yep"));
