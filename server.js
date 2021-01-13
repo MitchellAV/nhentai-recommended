@@ -33,9 +33,9 @@ app.get("/login", async (req, res) => {
 
 	await page.type(
 		"input[name='username_or_email']",
-		"mitchellvictoriano@gmail.com"
+		process.env.NHENTAI_EMAIL
 	);
-	await page.type("input[name='password']", "Mockingjay96");
+	await page.type("input[name='password']", process.env.NHENTAI_PASSWORD);
 	// // That's it, a single line of code to solve reCAPTCHAs 🎉
 	await page.solveRecaptchas();
 
