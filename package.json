@@ -15,6 +15,7 @@
 		"cheerio": "^1.0.0-rc.5",
 		"dotenv": "^8.2.0",
 		"express": "^4.17.1",
+		"mathjs": "^8.1.1",
 		"puppeteer": "^5.5.0",
 		"puppeteer-extra": "^3.1.15",
 		"puppeteer-extra-plugin-recaptcha": "^3.3.0"
