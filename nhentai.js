@@ -85,64 +85,115 @@ const scrapeNHentai = async (start_id, end_id, page) => {
 	}
 	console.log(`Finished!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
 };
+const assign_popularity = (num_favorites) => {
+	let tag = "";
+	if (num_favorites <= 2000) {
+		tag = "popularity-0";
+	} else if (num_favorites <= 5000) {
+		tag = "popularity-1";
+	} else if (num_favorites <= 10000) {
+		tag = "popularity-2";
+	} else if (num_favorites <= 25000) {
+		tag = "popularity-3";
+	} else if (num_favorites <= 50000) {
+		tag = "popularity-4";
+	} else {
+		tag = "popularity-5";
+	}
+	return tag;
+};
+const assign_length = (num_pages) => {
+	let tag = "";
+	if (num_pages <= 25) {
+		tag = "length-short";
+	} else if (num_pages <= 100) {
+		tag = "length-medium";
+	} else {
+		tag = "length-long";
+	}
+	return tag;
+};
 
-const convertVector = (input_array, ref_tags) => {
+const convertVector = (
+	input_array,
+	blacklist = [],
+	filterlist = { num_pages: -1, num_favorites: -1, tags: [] }
+) => {
 	const output_array = [];
 	input_array.forEach((book) => {
-		let vector = Array(ref_tags.length);
-		vector.fill(0);
-		const { id, tags, num_pages, num_favorites } = book;
-		const filteredBook = { id, num_pages, num_favorites, tags: [] };
-		if (num_pages <= 25) {
-			filteredBook.tags.push("length-short");
-		} else if (num_pages <= 100) {
-			filteredBook.tags.push("length-medium");
-		} else {
-			filteredBook.tags.push("length-long");
+		let skip = false;
+		const { id, tags, num_pages, num_favorites, title } = book;
+		const filteredBook = {
+			id,
+			title: title.pretty,
+			num_pages,
+			num_favorites,
+			tags: []
+		};
+		if (!skip) {
+			let num_pages_tag = assign_length(num_pages);
+			if (filterlist.num_pages != -1) {
+				let filter = assign_length(filterlist.num_pages);
+				if (num_pages_tag === filter) {
+					skip = true;
+				}
+			}
+			filteredBook.tags.push(num_pages_tag);
 		}
-
-		if (num_favorites <= 1000) {
-			filteredBook.tags.push("popularity-0");
-		} else if (num_favorites <= 5000) {
-			filteredBook.tags.push("popularity-1");
-		} else if (num_favorites <= 10000) {
-			filteredBook.tags.push("popularity-2");
-		} else if (num_favorites <= 25000) {
-			filteredBook.tags.push("popularity-3");
-		} else if (num_favorites <= 50000) {
-			filteredBook.tags.push("popularity-4");
-		} else {
-			filteredBook.tags.push("popularity-5");
+		if (!skip) {
+			let num_favorites_tag = assign_popularity(num_favorites);
+			if (filterlist.num_favorites != -1) {
+				let filter = assign_popularity(filterlist.num_pages);
+				if (num_favorites_tag === filter) {
+					skip = true;
+				}
+			}
+			filteredBook.tags.push(num_favorites_tag);
 		}
+		if (!skip) {
+			for (let i = 0; i < tags.length; i++) {
+				const tag = tags[i];
 
-		tags.forEach((tag) => {
-			// switch (tag.type) {
-			// 	case "tag":
-			// 		filteredBook.tags.push(tag.name);
-			// 		break;
-			// 	case "parody":
-			// 		filteredBook.tags.push(tag.name);
-			// 		break;
-			// 	case "character":
-			// 		filteredBook.tags.push(tag.name);
-			// 		break;
-			// 	case "artist":
-			// 		filteredBook.tags.push(tag.name);
-			// 		break;
-			// }
-			filteredBook.tags.push(tag.name);
-		});
+				if (blacklist.includes(tag.name)) {
+					skip = true;
+					break;
+				}
+				let tag_index = filterlist.tags.indexOf(tag.name);
+				if (tag_index !== -1) {
+					filterlist.tags.splice(tag_index, 1);
+				}
+				filteredBook.tags.push(tag.name);
+			}
+			if (filterlist.tags.length !== 0) {
+				skip = true;
+			}
+		}
+		// filteredBook.tags = combination(filteredBook.tags);
 		// filteredBook.tags.forEach((tag) => {
 		// 	const index = ref_tags.indexOf(tag);
 		// 	if (index !== -1) {
 		// 		filteredBook.vector[index] = 1;
 		// 	}
 		// });
-		output_array.push(filteredBook);
+		if (!skip) {
+			output_array.push(filteredBook);
+		}
 	});
 	return output_array;
 };
 
+const combination = (array) => {
+	let results = [];
+	// Since you only want pairs, there's no reason
+	// to iterate over the last element directly
+	for (let i = 0; i < array.length - 1; i++) {
+		// This is where you'll capture that last value
+		for (let j = i + 1; j < array.length; j++) {
+			results.push(`${array[i]} ${array[j]}`);
+		}
+	}
+	return results;
+};
 const sleep = (ms) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -198,12 +249,14 @@ const IDF = (all_books, book_tags, ref_tags) => {
 
 const TF_IDF = (all_books, ref_tags) => {
 	const all_TF_IDF_Vectors = [];
-	all_books.forEach((book) => {
+	const total = all_books.length;
+	all_books.forEach((book, i) => {
 		const book_tags = book.tags;
 		const TF_Vector = TF(book_tags, ref_tags);
 		const IDF_Vector = IDF(all_books, book_tags, ref_tags);
 		const TF_IDF_Vector = TF_Vector.map((e, i) => e * IDF_Vector[i]);
 		all_TF_IDF_Vectors.push(TF_IDF_Vector);
+		console.log(`Created ${i + 1}/${total}`);
 	});
 	return all_TF_IDF_Vectors;
 };
