@@ -18,16 +18,13 @@ const combination = (array) => {
 const get_database = (start, stop) => {
 	const files = fsSync.readdirSync("./json/database/");
 	let database = [];
-	start = start > files.length ? files.length : start;
-	stop = stop + 1 > files.length ? files.length : stop + 1;
-	console.log(start, stop);
+	stop = stop > files.length ? files.length : stop;
 
 	for (let i = start; i < stop; i++) {
 		const file = files[i];
-		console.log(file);
+		console.log(i, file);
 		let datapart = require(`./json/database/${file}`).posts;
 		database = [...database, ...datapart];
-		console.log(i);
 	}
 
 	return database;
@@ -43,8 +40,8 @@ const gen_ref_tags = (database) => {
 			}
 		}
 	}
-	ref_tags.sort();
-	// ref_tags = [...new Set(ref_tags)];
+	// ref_tags.sort();
+	ref_tags = [...new Set(ref_tags)];
 	return ref_tags;
 };
 module.exports = { sleep, combination, gen_ref_tags, get_database };

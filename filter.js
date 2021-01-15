@@ -28,22 +28,28 @@ const assign_length = (num_pages) => {
 	return tag;
 };
 
-const convertVector = (
+const get_img_type = (img_char) => {
+	let tag = "";
+	if (img_char == "j") {
+		tag = ".jpg";
+	} else if (img_char == "p") {
+		tag = ".png";
+	}
+	return tag;
+};
+
+const filterDatabase = (
 	input_array,
-	blacklist = [],
-	filterlist = { num_pages: -1, num_favorites: -1, tags: [] }
+	searchlist = { num_pages: -1, num_favorites: -1, tags: [] },
+	blacklist = []
 ) => {
 	const output_array = [];
-	input_array.forEach((book) => {
+
+	input_array.forEach((book, i) => {
 		let skip = false;
-		const { id, tags, num_pages, num_favorites, title } = book;
-		const filteredBook = {
-			id,
-			title: title.pretty,
-			num_pages,
-			num_favorites,
-			tags: []
-		};
+		const filterlist = searchlist;
+
+		const { id, title, num_favorites, num_pages, upload_date, tags } = book;
 		if (!skip) {
 			let num_pages_tag = assign_length(num_pages);
 			if (filterlist.num_pages != -1) {
@@ -52,7 +58,6 @@ const convertVector = (
 					skip = true;
 				}
 			}
-			filteredBook.tags.push(num_pages_tag);
 		}
 		if (!skip) {
 			let num_favorites_tag = assign_popularity(num_favorites);
@@ -62,37 +67,68 @@ const convertVector = (
 					skip = true;
 				}
 			}
-			filteredBook.tags.push(num_favorites_tag);
 		}
-		if (!skip) {
-			for (let i = 0; i < tags.length; i++) {
-				const tag = tags[i];
 
-				if (blacklist.includes(tag.name)) {
-					skip = true;
-					break;
-				}
-				let tag_index = filterlist.tags.indexOf(tag.name);
-				if (tag_index !== -1) {
-					filterlist.tags.splice(tag_index, 1);
-				}
-				filteredBook.tags.push(tag.name);
-			}
-			if (filterlist.tags.length !== 0) {
+		for (let i = 0; i < tags.length; i++) {
+			const tag = tags[i];
+			if (blacklist.includes(tag)) {
 				skip = true;
+				break;
+			}
+			let tag_index = filterlist.tags.indexOf(tag);
+			if (tag_index !== -1) {
+				filterlist.tags.splice(tag_index, 1);
 			}
 		}
-		filteredBook.tags = combination(filteredBook.tags);
-		// filteredBook.tags.forEach((tag) => {
-		// 	const index = ref_tags.indexOf(tag);
-		// 	if (index !== -1) {
-		// 		filteredBook.vector[index] = 1;
-		// 	}
-		// });
+		if (filterlist.tags.length !== 0) {
+			skip = true;
+		}
+
 		if (!skip) {
-			output_array.push(filteredBook);
+			output_array.push(input_array[i]);
 		}
 	});
 	return output_array;
 };
-module.exports = { convertVector };
+
+const cleanDatabase = (input_array) => {
+	const output_array = [];
+	input_array.forEach((book) => {
+		const {
+			id,
+			media_id,
+			title,
+			num_favorites,
+			num_pages,
+			upload_date,
+			tags,
+			images: { thumbnail }
+		} = book;
+		const filteredBook = {
+			id,
+			media_id,
+			title: title.pretty,
+			num_favorites,
+			num_pages,
+			upload_date: new Date(upload_date * 1000).toUTCString(),
+			url: `https://nhentai.net/g/${id}`,
+			thumbnail_url: `https://t.nhentai.net/galleries/${media_id}/thumb${get_img_type(
+				thumbnail.t
+			)}`,
+			tags: [],
+			score: 0
+		};
+		for (let i = 0; i < tags.length; i++) {
+			const { name } = tags[i];
+
+			filteredBook.tags.push(name);
+		}
+
+		filteredBook.tags = combination(filteredBook.tags);
+
+		output_array.push(filteredBook);
+	});
+
+	return output_array;
+};
+module.exports = { filterDatabase, cleanDatabase };
