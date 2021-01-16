@@ -45,18 +45,35 @@ const getBook = async (id) => {
 	}
 };
 
-const scrapeNHentai = async (start_id, end_id, page) => {
+const scrapeNHentai = async (start_id, end_id, page, database) => {
 	let id = start_id;
 	const itemsPerPage = 1000;
 	const consecLimit = 500;
 	let isFinished = false;
+	let database_ids = [];
+	for (let i = 0; i < database.length; i++) {
+		const id = database[i].id;
+		database_ids.push(id);
+	}
 	while (!isFinished) {
 		console.log(`Page: ${page}`);
-		let json = { posts: [] };
+		let json = require(`./json/database/${page}-1000-nhentai.json`);
 		let startId = id;
 		let numErrors = 0;
 		let consec_errors = 0;
 		while (id < startId + itemsPerPage && id <= end_id && !isFinished) {
+			let found = false;
+			for (let i = 0; i < database_ids.length; i++) {
+				let database_id = parseInt(database_ids[i]);
+				if (database_id == parseInt(id)) {
+					found = true;
+					break;
+				}
+			}
+			if (found) {
+				id++;
+				continue;
+			}
 			try {
 				book = await axios.get(`https://nhentai.net/api/gallery/${id}`);
 				consec_errors = 0;
@@ -68,11 +85,11 @@ const scrapeNHentai = async (start_id, end_id, page) => {
 				if (consec_errors > consecLimit) {
 					isFinished = true;
 				}
-				console.log(err);
+				console.log(`id: ${id} - ${err.response.data.error}`);
 			}
 			id++;
 		}
-
+		console.log(`Page: ${page} - ${json.length}`);
 		fs.writeFileSync(
 			`./json/database/${page}-${itemsPerPage}-nhentai.json`,
 			JSON.stringify(json)
@@ -85,15 +102,6 @@ const scrapeNHentai = async (start_id, end_id, page) => {
 		}
 	}
 	console.log(`Finished!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
-};
-const getBase64 = async (url) => {
-	return await axios
-		.get(url, {
-			responseType: "arraybuffer"
-		})
-		.then((response) =>
-			Buffer.from(response.data, "binary").toString("base64")
-		);
 };
 const download_image = async (url, image_path) =>
 	axios({

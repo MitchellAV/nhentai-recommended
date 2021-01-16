@@ -10,7 +10,7 @@ const { scrapeThumbnails } = require("../nhentai.js");
 
 let favorites = require("../json/personal/favorites.json").favorites;
 let blacklist = require("../json/personal/blacklist.json").list;
-const database = [...get_database(21, 132)];
+const database = [...favorites, ...get_database(0, Infinity)];
 
 console.log(favorites.length, blacklist.length, database.length);
 
@@ -221,7 +221,7 @@ const gen_recommendations = async (
 
 router.get("/recommend", async (req, res) => {
 	let search = req.query.tag;
-	let id = req.query.id;
+	let id = parseInt(req.query.id);
 	let search_list = [];
 	search ? (search_list = [search]) : (search_list = []);
 	const filterlist = {
@@ -265,6 +265,5 @@ router.get("/recommend", async (req, res) => {
 		data: recommendation_list,
 		search: search
 	});
-	// res.json(recommendation_list);
 });
 module.exports = router;

@@ -165,9 +165,7 @@ router.get("/blacklist", async (req, res) => {
 		const url = `https://nhentai.net/users/2343127/skater872/blacklist`;
 
 		// ... puppeteer code
-		const cookiesString = await fs.readFile(
-			"../json/personal/cookies.json"
-		);
+		const cookiesString = await fs.readFile("./json/personal/cookies.json");
 		const cookies = JSON.parse(cookiesString);
 		await page.setCookie(...cookies);
 		await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -187,7 +185,7 @@ router.get("/blacklist", async (req, res) => {
 		});
 
 		await fs.writeFile(
-			"../json/personal/blacklist.json",
+			"./json/personal/blacklist.json",
 			JSON.stringify(json)
 		);
 	} catch (err) {

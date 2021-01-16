@@ -18,9 +18,9 @@ const assign_popularity = (num_favorites) => {
 };
 const assign_length = (num_pages) => {
 	let tag = "";
-	if (num_pages <= 10) {
+	if (num_pages <= 15) {
 		tag = "length-very-short";
-	} else if (num_pages <= 25) {
+	} else if (num_pages <= 35) {
 		tag = "length-short";
 	} else if (num_pages <= 100) {
 		tag = "length-medium";
