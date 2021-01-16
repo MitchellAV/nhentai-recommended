@@ -47,9 +47,7 @@ const filterDatabase = (input_array, searchlist, blacklist = []) => {
 		let newfilter = { ...searchlist };
 
 		const { id, title, num_favorites, num_pages, upload_date, tags } = book;
-		if (id == 305243) {
-			let stop = false;
-		}
+
 		if (!skip) {
 			let num_pages_tag = assign_length(num_pages);
 			if (newfilter.num_pages != -1) {
@@ -70,7 +68,7 @@ const filterDatabase = (input_array, searchlist, blacklist = []) => {
 		}
 		if (!skip) {
 			for (let j = 0; j < tags.length; j++) {
-				const tag = tags[j];
+				let tag = tags[j];
 				if (blacklist.includes(tag)) {
 					skip = true;
 					break;
@@ -78,14 +76,15 @@ const filterDatabase = (input_array, searchlist, blacklist = []) => {
 			}
 		}
 		if (!skip) {
-			for (let j = 0; j < tags.length; j++) {
-				const tag = tags[j];
-
-				if (!newfilter.tags.includes(tag)) {
-					skip = true;
-				} else {
-					skip = false;
-					break;
+			if (newfilter.tags.length !== 0) {
+				for (let j = 0; j < tags.length; j++) {
+					let tag = tags[j];
+					if (!newfilter.tags.includes(tag)) {
+						skip = true;
+					} else {
+						skip = false;
+						break;
+					}
 				}
 			}
 		}
@@ -124,17 +123,50 @@ const cleanDatabase = (input_array) => {
 			thumbnail_url: `https://t.nhentai.net/galleries/${media_id}/thumb${get_img_type(
 				thumbnail.t
 			)}`,
+			languages: [],
+			categories: [],
+			characters: [],
+			parodies: [],
+			artists: [],
+			groups: [],
+			basic_tags: [],
 			tags: [],
 			score: 0
 		};
 		let num_pages_tag = assign_length(num_pages);
+		filteredBook.basic_tags.push(num_pages_tag);
 		filteredBook.tags.push(num_pages_tag);
 		let num_favorites_tag = assign_popularity(num_favorites);
+		filteredBook.basic_tags.push(num_favorites_tag);
 		filteredBook.tags.push(num_favorites_tag);
 
 		for (let i = 0; i < tags.length; i++) {
-			const { name } = tags[i];
+			const { name, type } = tags[i];
+			switch (type) {
+				case "artist":
+					filteredBook.artists.push(name);
+					break;
+				case "language":
+					filteredBook.languages.push(name);
+					break;
+				case "group":
+					filteredBook.groups.push(name);
+					break;
+				case "category":
+					filteredBook.categories.push(name);
+					break;
+				case "parody":
+					filteredBook.parodies.push(name);
+				case "character":
+					filteredBook.characters.push(name);
+					break;
+				case "tag":
+					filteredBook.basic_tags.push(name);
+					break;
 
+				default:
+					break;
+			}
 			filteredBook.tags.push(name);
 		}
 

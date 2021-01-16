@@ -1,5 +1,6 @@
 <% recommendations.forEach(book=> { const {id, media_id, title, num_favorites, num_pages, upload_date, url,
-	thumbnail_url, tags, score}= book %> <article class="book">
+	thumbnail_url, score,languages, categories, characters, parodies, artists, groups, basic_tags,tags}= book %>
+	<article class="book">
 		<h2 class="book-title">
 			<%= title %>
 		</h2>
@@ -7,27 +8,75 @@
 			<img src='../thumbnails/<%= thumbnail_url.replace("https://t.nhentai.net/galleries/", "" ).replace("/", "-" ); %>'
 				class=" project-img" loading='lazy' alt="<%= id%>">
 			<div>
-				<ul>
-					<li> id: <%= id %>
-					</li>
-					<li> num_favorites: <%= num_favorites %>
-					</li>
-					<li> num_pages: <%= num_pages %>
-					</li>
-					<li> upload_date: <%= upload_date %>
-					</li>
-				</ul>
-				<p>Tags:</p>
-				<div class='tags'>
-					<% tags.forEach(tag=> {%> <li class='tag'>
-							<a href="/recommend/<%= tag%>">
+				<p><b>ID:</b>
+					<a class='tag' href=" /recommend?id=<%=id%>">
+						<%= id%>
+					</a>
+				</p>
+				<p><b>Score:</b>
+					<%= score.toFixed(3) %>
+				</p>
+				<p><b>Categories:</b>
+					<% categories.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</p>
+				<p><b>Languages:</b>
+					<% languages.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</p>
+				<%if(parodies.length !==0){ %>
+					<p><b>Parodies:</b>
+						<% parodies.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
 								<%= tag%>
 							</a>
-						</li>
-						<%})%>
-				</div>
+							<%})%>
+					</p>
+					<%} %>
+						<%if(characters.length !==0){ %>
+							<p><b>Characters:</b>
+								<% characters.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+										<%= tag%>
+									</a>
+									<%})%>
+							</p>
+							<%} %>
+								<p><b>Artists:</b>
+									<% artists.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+											<%= tag%>
+										</a>
+										<%})%>
+								</p>
+								<%if(groups.length !==0){ %>
+									<p><b>Groups:</b>
+										<% groups.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+												<%= tag%>
+											</a>
+											<%})%>
+									</p>
+									<%}%>
+										<p><b>Favorites:</b>
+											<%= num_favorites %>
+										</p>
+										<p><b>Pages:</b>
+											<%= num_pages %>
+										</p>
+										<p><b>Upload:</b>
+											<%= upload_date %>
+										</p>
+										<p><b>Tags:</b></p>
+										<div class='tags'>
+											<% basic_tags.forEach(tag=> {%> <a class='tag'
+													href=" /recommend?tag=<%=tag%>">
+													<%= tag%>
+												</a>
+												<%})%>
+										</div>
 			</div>
 		</div>
-		<a class="button" href="<%= url%>" target="_blank"> Visit nHentai.net </a>
+		<a class="button" href="<%= url%>" target="_blank">Read Doujinshi</a>
 	</article>
 	<% }) %>

@@ -2,9 +2,12 @@
 	box-sizing: border-box;
 }
 
-body {
+main {
 	display: flex;
 	flex-direction: column;
+}
+h1 {
+	text-transform: capitalize;
 }
 .info {
 	display: flex;
@@ -13,17 +16,17 @@ body {
 img {
 	object-fit: contain;
 	max-width: 100%;
-	height: auto;
+	height: 500px;
 }
 
 .tag {
 	margin: 0.2rem;
 	list-style-type: none;
 	background-color: burlywood;
-}
-.tag > a {
 	color: black;
 	text-decoration: none;
+}
+.tag > a {
 }
 .button {
 	margin-top: 1rem;
@@ -75,14 +78,14 @@ h2 {
 }
 /* Large devices (laptops/desktops, 992px and up) */
 @media only screen and (min-width: 992px) {
-	body {
+	main {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 	}
 
 	img {
 		object-fit: contain;
-		max-width: 200px;
+		max-width: 250px;
 		height: auto;
 	}
 }
