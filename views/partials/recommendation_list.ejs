@@ -1,0 +1,33 @@
+<% recommendations.forEach(book=> { const {id, media_id, title, num_favorites, num_pages, upload_date, url,
+	thumbnail_url, tags, score}= book %> <article class="book">
+		<h2 class="book-title">
+			<%= title %>
+		</h2>
+		<div class="info">
+			<img src='../thumbnails/<%= thumbnail_url.replace("https://t.nhentai.net/galleries/", "" ).replace("/", "-" ); %>'
+				class=" project-img" loading='lazy' alt="<%= id%>">
+			<div>
+				<ul>
+					<li> id: <%= id %>
+					</li>
+					<li> num_favorites: <%= num_favorites %>
+					</li>
+					<li> num_pages: <%= num_pages %>
+					</li>
+					<li> upload_date: <%= upload_date %>
+					</li>
+				</ul>
+				<p>Tags:</p>
+				<div class='tags'>
+					<% tags.forEach(tag=> {%> <li class='tag'>
+							<a href="/recommend/<%= tag%>">
+								<%= tag%>
+							</a>
+						</li>
+						<%})%>
+				</div>
+			</div>
+		</div>
+		<a class="button" href="<%= url%>" target="_blank"> Visit nHentai.net </a>
+	</article>
+	<% }) %>

@@ -87,10 +87,10 @@ const multiply_TF_IDF = (TF_Vector, IDF_Vector) => {
 	return TF_IDF_Vector;
 };
 
-const TF_IDF = async (all_books, ref_tags) => {
+const TF_IDF = async (all_books, ref_tags, name) => {
 	let count_books_tag;
 	try {
-		count_books_tag = require("../json/count_books_tag.json").list;
+		count_books_tag = require(`../json/${name}_count_books_tag.json`).list;
 		if (count_books_tag.length !== ref_tags.length) {
 			throw new Error("Length different");
 		}
@@ -98,7 +98,10 @@ const TF_IDF = async (all_books, ref_tags) => {
 		count_books_tag = gen_count_books_tag(all_books, ref_tags);
 		console.log("created TF-IDF database vectors");
 		const json = { list: [...count_books_tag] };
-		await fs.writeFile("./json/count_books_tag.json", JSON.stringify(json));
+		await fs.writeFile(
+			`./json/${name}_count_books_tag.json`,
+			JSON.stringify(json)
+		);
 	}
 	const all_TF_IDF_Vectors = [];
 	const total = all_books.length;

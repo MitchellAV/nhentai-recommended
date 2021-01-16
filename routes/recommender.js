@@ -6,6 +6,7 @@ const fs = require("fs").promises;
 const { filterDatabase, cleanDatabase } = require("../filter");
 const { TF_IDF } = require("../tf-idf");
 const { get_database, gen_ref_tags } = require("../util");
+const { scrapeThumbnails } = require("../nhentai.js");
 
 let favorites = require("../json/personal/favorites.json").favorites;
 let blacklist = require("../json/personal/blacklist.json").list;
@@ -75,7 +76,7 @@ const gen_recommendations = async (
 	//  create vectors for database and personal
 	// Jaccard similarity or Tf-idf
 	// create personal vector
-	const search_vectors = await TF_IDF(filtered_search, ref_tags);
+	const search_vectors = await TF_IDF(filtered_search, ref_tags, "favorites");
 
 	// combine together to one vector
 	let avg_search_vector = avg_vectors(search_vectors);
@@ -88,7 +89,11 @@ const gen_recommendations = async (
 			throw new Error("Length different");
 		}
 	} catch (err) {
-		database_vectors = await TF_IDF(filtered_database, ref_tags);
+		database_vectors = await TF_IDF(
+			filtered_database,
+			ref_tags,
+			"database"
+		);
 		console.log("created TF-IDF database vectors");
 		const json = { list: [...database_vectors] };
 		await fs.writeFile(
@@ -97,17 +102,29 @@ const gen_recommendations = async (
 		);
 	}
 
+	let recommend;
+
+	try {
+		recommend = require("../json/recommended.json").list;
+		if (recommend.length !== filtered_database.length) {
+			throw new Error("Length different");
+		}
+	} catch (err) {
+		const total = database_vectors.length;
+		recommend = [];
+		database_vectors.forEach((vector, i) => {
+			const score = cosine_similarity(avg_search_vector, vector);
+
+			let book = { ...filtered_database[i], score };
+
+			recommend.push(book);
+			console.log(`Scored ${i + 1}/${total}`);
+		});
+		console.log("created recommended");
+		const json = { list: [...recommend] };
+		await fs.writeFile("./json/recommended.json", JSON.stringify(json));
+	}
 	// compare user to database
-	const total = database_vectors.length;
-	let recommend = [];
-	database_vectors.forEach((vector, i) => {
-		const score = cosine_similarity(avg_search_vector, vector);
-
-		let book = { ...filtered_database[i], score };
-
-		recommend.push(book);
-		console.log(`Scored ${i + 1}/${total}`);
-	});
 
 	// order rankings
 	recommend.sort((a, b) => {
@@ -125,11 +142,12 @@ const gen_recommendations = async (
 	return recommend.slice(0, num_results);
 };
 
-router.get("/recommend", async (req, res) => {
+router.get("/recommend/:tag", async (req, res) => {
+	const search = req.params.tag;
 	const filterlist = {
 		num_pages: -1,
 		num_favorites: -1,
-		tags: []
+		tags: [search]
 	};
 	// filter databases
 	const filtered_fav = cleanDatabase(favorites);
@@ -143,6 +161,10 @@ router.get("/recommend", async (req, res) => {
 		blacklist,
 		100
 	);
-	res.json(recommendation_list);
+
+	await scrapeThumbnails(recommendation_list);
+
+	res.render("pages/recommended", { data: recommendation_list });
+	// res.json(recommendation_list);
 });
 module.exports = router;

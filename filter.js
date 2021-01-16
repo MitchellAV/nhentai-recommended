@@ -18,7 +18,9 @@ const assign_popularity = (num_favorites) => {
 };
 const assign_length = (num_pages) => {
 	let tag = "";
-	if (num_pages <= 25) {
+	if (num_pages <= 10) {
+		tag = "length-very-short";
+	} else if (num_pages <= 25) {
 		tag = "length-short";
 	} else if (num_pages <= 100) {
 		tag = "length-medium";
@@ -38,22 +40,20 @@ const get_img_type = (img_char) => {
 	return tag;
 };
 
-const filterDatabase = (
-	input_array,
-	searchlist = { num_pages: -1, num_favorites: -1, tags: [] },
-	blacklist = []
-) => {
+const filterDatabase = (input_array, searchlist, blacklist = []) => {
 	const output_array = [];
-
 	input_array.forEach((book, i) => {
 		let skip = false;
-		const filterlist = searchlist;
+		let newfilter = { ...searchlist };
 
 		const { id, title, num_favorites, num_pages, upload_date, tags } = book;
+		if (id == 305243) {
+			let stop = false;
+		}
 		if (!skip) {
 			let num_pages_tag = assign_length(num_pages);
-			if (filterlist.num_pages != -1) {
-				let filter = assign_length(filterlist.num_pages);
+			if (newfilter.num_pages != -1) {
+				let filter = assign_length(newfilter.num_pages);
 				if (num_pages_tag === filter) {
 					skip = true;
 				}
@@ -61,28 +61,37 @@ const filterDatabase = (
 		}
 		if (!skip) {
 			let num_favorites_tag = assign_popularity(num_favorites);
-			if (filterlist.num_favorites != -1) {
-				let filter = assign_popularity(filterlist.num_pages);
+			if (newfilter.num_favorites != -1) {
+				let filter = assign_popularity(newfilter.num_pages);
 				if (num_favorites_tag === filter) {
 					skip = true;
 				}
 			}
 		}
+		if (!skip) {
+			for (let j = 0; j < tags.length; j++) {
+				const tag = tags[j];
+				if (blacklist.includes(tag)) {
+					skip = true;
+					break;
+				}
+			}
+		}
+		if (!skip) {
+			for (let j = 0; j < tags.length; j++) {
+				const tag = tags[j];
 
-		for (let i = 0; i < tags.length; i++) {
-			const tag = tags[i];
-			if (blacklist.includes(tag)) {
-				skip = true;
-				break;
-			}
-			let tag_index = filterlist.tags.indexOf(tag);
-			if (tag_index !== -1) {
-				filterlist.tags.splice(tag_index, 1);
+				if (!newfilter.tags.includes(tag)) {
+					skip = true;
+				} else {
+					skip = false;
+					break;
+				}
 			}
 		}
-		if (filterlist.tags.length !== 0) {
-			skip = true;
-		}
+		// if (newfilter.tags.length !== 0) {
+		// 	skip = true;
+		// }
 
 		if (!skip) {
 			output_array.push(input_array[i]);
@@ -118,13 +127,21 @@ const cleanDatabase = (input_array) => {
 			tags: [],
 			score: 0
 		};
+		let num_pages_tag = assign_length(num_pages);
+		filteredBook.tags.push(num_pages_tag);
+		let num_favorites_tag = assign_popularity(num_favorites);
+		filteredBook.tags.push(num_favorites_tag);
+
 		for (let i = 0; i < tags.length; i++) {
 			const { name } = tags[i];
 
 			filteredBook.tags.push(name);
 		}
 
-		filteredBook.tags = combination(filteredBook.tags);
+		filteredBook.tags = [
+			...filteredBook.tags
+			// ...combination(filteredBook.tags)
+		];
 
 		output_array.push(filteredBook);
 	});
