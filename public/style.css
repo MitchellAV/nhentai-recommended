@@ -48,6 +48,9 @@ article {
 	display: flex;
 	flex-wrap: wrap;
 }
+h2 {
+	margin-top: 0;
+}
 
 /* Medium devices (landscape tablets, 768px and up) */
 @media only screen and (min-width: 768px) {
@@ -68,9 +71,6 @@ article {
 		object-fit: contain;
 		max-width: 200px;
 		height: auto;
-	}
-	h2 {
-		margin-top: 0;
 	}
 }
 /* Large devices (laptops/desktops, 992px and up) */
