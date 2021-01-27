@@ -50,28 +50,20 @@ const gen_count_books_tag = (all_books, ref_tags) => {
 		const tag = ref_tags[i];
 		const count = count_docs_with_tag(tag, all_books);
 		count_books_tag.push(count);
-		console.log(`ref: ${i + 1}/${ref_tags_length}`);
 	}
 	return count_books_tag;
 };
 
 const IDF = (all_books, book_tags, ref_tags, count_books_tag) => {
-	let IDF_Vector = Array(ref_tags.length);
-	IDF_Vector.fill(0);
+	let IDF_Vector = Array(ref_tags.length).fill(0);
 
 	const total_num_docs = all_books.length;
 	const book_tags_length = book_tags.length;
 	for (let i = 0; i < book_tags_length; i++) {
 		const tag = book_tags[i];
-		// console.time("for loop");
 		let index = findItemIndex(ref_tags, tag);
-		// console.timeEnd("for loop");
-		// console.time("indexof");
-		// index = ref_tags.indexOf(tag);
-		// console.timeEnd("indexof");
 		if (index !== -1) {
 			let num_docs_with_tag = count_books_tag[i];
-
 			IDF_Vector[index] = Math.log(total_num_docs / num_docs_with_tag);
 		}
 	}
@@ -87,7 +79,7 @@ const multiply_TF_IDF = (TF_Vector, IDF_Vector) => {
 	return TF_IDF_Vector;
 };
 
-const TF_IDF = async (all_books, ref_tags, name) => {
+const get_count_books_tag = async (all_books, ref_tags, name) => {
 	let count_books_tag;
 	try {
 		count_books_tag = require(`../json/${name}_count_books_tag.json`).list;
@@ -103,32 +95,29 @@ const TF_IDF = async (all_books, ref_tags, name) => {
 			JSON.stringify(json)
 		);
 	}
+	return count_books_tag;
+};
+
+const TF_IDF = async (all_books, ref_tags, name) => {
+	const count_books_tag = await get_count_books_tag(
+		all_books,
+		ref_tags,
+		name
+	);
+
 	const all_TF_IDF_Vectors = [];
 	const total = all_books.length;
 
-	console.time("finish");
 	let all_books_length = all_books.length;
 	for (let i = 0; i < all_books_length; i++) {
 		const book = all_books[i];
-
 		const book_tags = book.tags;
-		// console.time("TF");
 		const TF_Vector = TF(book_tags, ref_tags);
-		// console.timeEnd("TF");
-		// console.time("IDF");
 		const IDF_Vector = IDF(all_books, book_tags, ref_tags, count_books_tag);
-		// console.timeEnd("IDF");
-
-		// console.time("TF-IDF");
 		let TF_IDF_Vector = multiply_TF_IDF(TF_Vector, IDF_Vector);
-		// console.timeEnd("TF-IDF");
-		// console.time("map");
-		// TF_IDF_Vector = TF_Vector.map((e, i) => e * IDF_Vector[i]);
-		// console.timeEnd("map");
 		all_TF_IDF_Vectors.push(TF_IDF_Vector);
 		console.log(`Created ${i + 1}/${total}`);
 	}
-	console.timeEnd("finish");
 
 	return all_TF_IDF_Vectors;
 };

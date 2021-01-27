@@ -10,54 +10,64 @@ const { scrapeThumbnails } = require("../nhentai.js");
 
 let favorites = require("../json/personal/favorites.json").favorites;
 let blacklist = require("../json/personal/blacklist.json").list;
-const database = [...favorites, ...get_database(0, Infinity)];
+const database = [...get_database(0, Infinity)];
 
-console.log(favorites.length, blacklist.length, database.length);
+let filtered_fav = cleanDatabase(favorites);
+console.log("created filtered fav");
+const filtered_database = cleanDatabase(database);
+console.log("created filtered database");
 
 router.get("/personal", async (req, res) => {
+	// let id = parseInt(req.query.id);
+	// search ? (search_list = [search]) : (search_list = []);
+
+	// id ? (search = `${id}`) : (search = `${search}`);
+	// search ? (search = `${search}`) : (search = `${id}`);
+	// // filter databases
+
+	let ref_tags = await gen_ref_tags(filtered_fav);
+
+	// ref_tags = gen_ref_tags(filtered_database);
+
+	let search_vector_name = "favorites";
+
+	let favorites_TF_IDF_Vectors = await get_Favorites_TF_IDF_Vectors(
+		filtered_fav,
+		ref_tags
+	);
+
+	let search_vector = avg_vectors(favorites_TF_IDF_Vectors);
+
+	let recommended_list = await get_recommended(
+		search_vector,
+		favorites_TF_IDF_Vectors,
+		filtered_fav,
+		search_vector_name
+	);
+
+	let ignore_list = [];
 	let search = req.query.tag;
-	let id = req.query.id;
 	let search_list = [];
 	search ? (search_list = [search]) : (search_list = []);
+
 	const filterlist = {
 		num_pages: -1,
 		num_favorites: -1,
 		tags: search_list
 	};
-	id ? (search = `${id}`) : (search = `${search}`);
-	search ? (search = `${search}`) : (search = `${id}`);
-	// filter databases
-	let filtered_fav = cleanDatabase(favorites);
-	console.log("created filtered fav");
-	// const filtered_database = cleanDatabase(database);
-	// console.log("created filtered database");
-
-	let ref_tags = gen_ref_tags(filtered_fav);
-	let searchedBook = filtered_fav;
-	if (id) {
-		for (let i = 0; i < filtered_fav.length; i++) {
-			const book = filtered_fav[i];
-			if (book.id == id) {
-				searchedBook = [book];
-				break;
-			}
-		}
-	}
-
-	const recommendation_list = await gen_recommendations(
-		filtered_fav,
-		searchedBook,
-		ref_tags,
+	const filtered_recommended_list = filter_recommended(
+		recommended_list,
+		ignore_list,
 		filterlist,
 		blacklist,
 		100,
-		"personal"
+		"database"
 	);
 
-	await scrapeThumbnails(recommendation_list);
+	await scrapeThumbnails(filtered_recommended_list);
 
 	res.render("pages/recommended", {
-		data: recommendation_list,
+		data: filtered_recommended_list,
 		search: search
 	});
 });
@@ -91,137 +101,171 @@ const is_in_array = (array, target) => {
 	return found;
 };
 
-const gen_recommendations = async (
-	filtered_database,
-	filtered_search,
-	ref_tags,
+const get_Database_TF_IDF_Vectors = async (filtered_database, ref_tags) => {
+	let database_vectors;
+	try {
+		database_vectors = require("../json/database_TF_IDF_Vectors.json").list;
+		if (
+			database_vectors.length !== filtered_database.length ||
+			database_vectors[0].length !== ref_tags.length
+		) {
+			throw new Error("Length different");
+		}
+	} catch (err) {
+		database_vectors = await TF_IDF(
+			filtered_database,
+			ref_tags,
+			"database"
+		);
+		console.log("created TF-IDF database vectors");
+		const json = { list: [...database_vectors] };
+		await fs.writeFile(
+			"./json/database_TF_IDF_Vectors.json",
+			JSON.stringify(json)
+		);
+	}
+
+	return database_vectors;
+};
+const get_Favorites_TF_IDF_Vectors = async (filtered_fav, ref_tags) => {
+	let database_vectors;
+	try {
+		database_vectors = require("../json/favorites_TF_IDF_Vectors.json")
+			.list;
+		if (
+			database_vectors.length !== filtered_fav.length ||
+			database_vectors[0].length !== ref_tags.length
+		) {
+			throw new Error("Length different");
+		}
+	} catch (err) {
+		database_vectors = await TF_IDF(filtered_fav, ref_tags, "favorites");
+		console.log("created Favorites TF-IDF database vectors");
+		const json = { list: [...database_vectors] };
+		await fs.writeFile(
+			"./json/favorites_TF_IDF_Vectors.json",
+			JSON.stringify(json)
+		);
+	}
+
+	return database_vectors;
+};
+const get_recommended = async (
+	single_vector,
+	database_vectors,
+	database,
+	name
+) => {
+	let recommend;
+	try {
+		if (name == "id") {
+			throw new Error("Don't save id searches");
+		}
+		recommend = require(`../json/${name}-recommended.json`).list;
+		if (recommend.length !== database_vectors.length) {
+			throw new Error("Length different");
+		}
+	} catch (err) {
+		recommend = [];
+		const total = database_vectors.length;
+		for (let i = 0; i < database_vectors.length; i++) {
+			const vector = database_vectors[i];
+
+			const score = cosine_similarity(single_vector, vector);
+
+			let book = { ...database[i], score };
+
+			recommend.push(book);
+			console.log(`Scored ${i + 1}/${total}`);
+		}
+
+		console.log("created recommended");
+		if (name !== "id") {
+			const json = { list: [...recommend] };
+			await fs.writeFile(
+				`./json/${name}-recommended.json`,
+				JSON.stringify(json)
+			);
+		}
+	}
+	return recommend;
+};
+const filter_recommended = (
+	recommended_list,
+	ignore_list,
 	filterlist,
 	blacklist,
 	num_results,
-	type
+	name
 ) => {
-	//  create vectors for database and personal
-	// Jaccard similarity or Tf-idf
-	// create personal vector
-	const search_vectors = await TF_IDF(filtered_search, ref_tags, "favorites");
-
-	// combine together to one vector
-	let avg_search_vector = avg_vectors(search_vectors);
-	// create database vector
-	let database_vectors;
-	if (type == "personal") {
-		try {
-			database_vectors = require("../json/favorite_TF_IDF_Vectors.json")
-				.list;
-			if (database_vectors.length !== filtered_database.length) {
-				throw new Error("Length different");
-			}
-		} catch (err) {
-			database_vectors = await TF_IDF(
-				filtered_database,
-				ref_tags,
-				"database"
-			);
-			console.log("created TF-IDF favorite vectors");
-			const json = { list: [...database_vectors] };
-			await fs.writeFile(
-				"./json/favorite_TF_IDF_Vectors.json",
-				JSON.stringify(json)
-			);
-		}
-	} else if (type == "database") {
-		try {
-			database_vectors = require("../json/database_TF_IDF_Vectors.json")
-				.list;
-			if (database_vectors.length !== filtered_database.length) {
-				throw new Error("Length different");
-			}
-		} catch (err) {
-			database_vectors = await TF_IDF(
-				filtered_database,
-				ref_tags,
-				"database"
-			);
-			console.log("created TF-IDF database vectors");
-			const json = { list: [...database_vectors] };
-			await fs.writeFile(
-				"./json/database_TF_IDF_Vectors.json",
-				JSON.stringify(json)
-			);
-		}
-	}
-
-	let recommend;
-	if (type == "personal") {
-		try {
-			recommend = require("../json/recommended-fav.json").list;
-			if (recommend.length !== filtered_database.length) {
-				throw new Error("Length different");
-			}
-		} catch (err) {
-			const total = database_vectors.length;
-			recommend = [];
-			database_vectors.forEach((vector, i) => {
-				const score = cosine_similarity(avg_search_vector, vector);
-
-				let book = { ...filtered_database[i], score };
-
-				recommend.push(book);
-				console.log(`Scored ${i + 1}/${total}`);
-			});
-			console.log("created recommended");
-			const json = { list: [...recommend] };
-			await fs.writeFile(
-				"./json/recommended-fav.json",
-				JSON.stringify(json)
-			);
-		}
-	} else if (type == "database") {
-		try {
-			recommend = require("../json/recommended.json").list;
-			if (recommend.length !== filtered_database.length) {
-				throw new Error("Length different");
-			}
-		} catch (err) {
-			const total = database_vectors.length;
-			recommend = [];
-			database_vectors.forEach((vector, i) => {
-				const score = cosine_similarity(avg_search_vector, vector);
-
-				let book = { ...filtered_database[i], score };
-
-				recommend.push(book);
-				console.log(`Scored ${i + 1}/${total}`);
-			});
-			console.log("created recommended");
-			const json = { list: [...recommend] };
-			await fs.writeFile("./json/recommended.json", JSON.stringify(json));
-		}
-	}
-
-	// compare user to database
-
 	// order rankings
-	recommend.sort((a, b) => {
+	recommended_list.sort((a, b) => {
 		return b.score - a.score;
 	});
 	// filter rankings
 	// remove favorited post
-	if (type == "database") {
-		recommend = recommend.filter(
-			(book) => !is_in_array(filtered_search, book.title)
+	if (name == "database") {
+		recommended_list = recommended_list.filter(
+			(book) => !is_in_array(ignore_list, book.title)
 		);
 	}
 
-	recommend = filterDatabase(recommend, filterlist, blacklist);
-
+	recommended_list = filterDatabase(recommended_list, filterlist, blacklist);
+	// recommended_list = recommended_list.filter(
+	// 	(book) => parseInt(book.num_favorites) >= 10000
+	// );
 	// return list of
-	return recommend.slice(0, num_results);
+	return recommended_list.slice(0, num_results);
 };
 
 router.get("/recommend", async (req, res) => {
-	let search = req.query.tag;
 	let id = parseInt(req.query.id);
+	// search ? (search_list = [search]) : (search_list = []);
+
+	// id ? (search = `${id}`) : (search = `${search}`);
+	// search ? (search = `${search}`) : (search = `${id}`);
+	// // filter databases
+
+	let ref_tags = await gen_ref_tags(filtered_fav);
+
+	// ref_tags = gen_ref_tags(filtered_database);
+
+	let database_TF_IDF_Vectors = await get_Database_TF_IDF_Vectors(
+		filtered_database,
+		ref_tags
+	);
+
+	let search_vector;
+	let search_vector_name;
+	if (id) {
+		search_vector_name = "id";
+		for (let i = 0; i < filtered_database.length; i++) {
+			const book = filtered_database[i];
+			if (book.id == id) {
+				search_vector = database_TF_IDF_Vectors[i];
+				break;
+			}
+		}
+	} else {
+		search_vector_name = "user";
+
+		let favorites_TF_IDF_Vectors = await get_Favorites_TF_IDF_Vectors(
+			filtered_fav,
+			ref_tags
+		);
+
+		search_vector = avg_vectors(favorites_TF_IDF_Vectors);
+	}
+
+	let recommended_list = await get_recommended(
+		search_vector,
+		database_TF_IDF_Vectors,
+		filtered_database,
+		search_vector_name
+	);
+
+	let ignore_list = [...filtered_fav];
+	let search = req.query.tag;
 	let search_list = [];
 	search ? (search_list = [search]) : (search_list = []);
 	const filterlist = {
@@ -229,40 +273,24 @@ router.get("/recommend", async (req, res) => {
 		num_favorites: -1,
 		tags: search_list
 	};
-	id ? (search = `${id}`) : (search = `${search}`);
-	search ? (search = `${search}`) : (search = `${id}`);
-	// filter databases
-	let filtered_fav = cleanDatabase(favorites);
-	console.log("created filtered fav");
-	const filtered_database = cleanDatabase(database);
-	console.log("created filtered database");
-
-	let ref_tags = gen_ref_tags(filtered_fav);
-
-	if (id) {
-		for (let i = 0; i < filtered_database.length; i++) {
-			const book = filtered_database[i];
-			if (book.id == id) {
-				filtered_fav = [book];
-				break;
-			}
-		}
-	}
-
-	const recommendation_list = await gen_recommendations(
-		filtered_database,
-		filtered_fav,
-		ref_tags,
+	let filtered_recommended_list = filter_recommended(
+		recommended_list,
+		ignore_list,
 		filterlist,
 		blacklist,
-		100,
+		150,
 		"database"
 	);
 
-	await scrapeThumbnails(recommendation_list);
+	// filtered_recommended_list = filtered_recommended_list.filter((book) => {
+	// 	console.log(book.score);
+	// 	return parseInt(book.score) <= 0.8;
+	// });
+
+	await scrapeThumbnails(filtered_recommended_list);
 
 	res.render("pages/recommended", {
-		data: recommendation_list,
+		data: filtered_recommended_list,
 		search: search
 	});
 });

@@ -1,12 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const dotenv = require("dotenv").config({ path: "../config.env" });
+const dotenv = require("dotenv").config();
 const puppeteer = require("puppeteer-extra");
 const cheerio = require("cheerio");
 const fs = require("fs").promises;
 
 const { getBook } = require("../nhentai");
 const { sleep } = require("../util");
+
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+puppeteer.use(StealthPlugin());
 
 // add recaptcha plugin and provide it your 2captcha token (= their apiKey)
 // 2captcha is the builtin solution provider but others would work as well.
@@ -26,9 +29,11 @@ router.get("/login", async (req, res) => {
 	const browser = await puppeteer.launch({
 		headless: false
 	});
-	const url = "https://nhentai.net/favorites/";
+	const url = "https://nhentai.net/login/";
+	const page = await browser.newPage();
 
-	await page.goto(url, { waitUntil: "domcontentloaded" });
+	await page.goto(url);
+	await page.waitForSelector("input[name='username_or_email']");
 
 	await page.type(
 		"input[name='username_or_email']",
@@ -46,7 +51,7 @@ router.get("/login", async (req, res) => {
 	// ... puppeteer code
 	const cookies = await page.cookies();
 	await fs.writeFile(
-		"../json/personal/cookies.json",
+		"./json/personal/cookies.json",
 		JSON.stringify(cookies, null, 2)
 	);
 	await browser.close();
@@ -71,6 +76,7 @@ router.get("/favorites", async (req, res) => {
 			const cookies = JSON.parse(cookiesString);
 			await page.setCookie(...cookies);
 			await page.goto(url, { waitUntil: "domcontentloaded" });
+			await page.waitForSelector("#content");
 
 			const content = await page.content();
 
@@ -105,6 +111,7 @@ router.get("/favorites", async (req, res) => {
 	} catch (err) {
 		console.error(err);
 	}
+
 	favorites = require("../json/personal/favorites.json").favorites;
 
 	res.json(favorites);

@@ -41,7 +41,7 @@ const get_img_type = (img_char) => {
 };
 
 const filterDatabase = (input_array, searchlist, blacklist = []) => {
-	const output_array = [];
+	let output_array = [];
 	input_array.forEach((book, i) => {
 		let skip = false;
 		let newfilter = { ...searchlist };
@@ -96,6 +96,7 @@ const filterDatabase = (input_array, searchlist, blacklist = []) => {
 			output_array.push(input_array[i]);
 		}
 	});
+
 	return output_array;
 };
 
@@ -133,12 +134,12 @@ const cleanDatabase = (input_array) => {
 			tags: [],
 			score: 0
 		};
-		let num_pages_tag = assign_length(num_pages);
-		filteredBook.basic_tags.push(num_pages_tag);
-		filteredBook.tags.push(num_pages_tag);
-		let num_favorites_tag = assign_popularity(num_favorites);
-		filteredBook.basic_tags.push(num_favorites_tag);
-		filteredBook.tags.push(num_favorites_tag);
+		// let num_pages_tag = assign_length(num_pages);
+		// filteredBook.basic_tags.push(num_pages_tag);
+		// filteredBook.tags.push(num_pages_tag);
+		// let num_favorites_tag = assign_popularity(num_favorites);
+		// filteredBook.basic_tags.push(num_favorites_tag);
+		// filteredBook.tags.push(num_favorites_tag);
 
 		for (let i = 0; i < tags.length; i++) {
 			const { name, type } = tags[i];

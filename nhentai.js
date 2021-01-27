@@ -57,7 +57,12 @@ const scrapeNHentai = async (start_id, end_id, page, database) => {
 	}
 	while (!isFinished) {
 		console.log(`Page: ${page}`);
-		let json = require(`./json/database/${page}-1000-nhentai.json`);
+		let json;
+		try {
+			json = require(`./json/database/${page}-1000-nhentai.json`);
+		} catch (err) {
+			json = { posts: [] };
+		}
 		let startId = id;
 		let numErrors = 0;
 		let consec_errors = 0;
@@ -89,7 +94,7 @@ const scrapeNHentai = async (start_id, end_id, page, database) => {
 			}
 			id++;
 		}
-		console.log(`Page: ${page} - ${json.length}`);
+		console.log(`Page: ${page} - ${json.posts.length}`);
 		fs.writeFileSync(
 			`./json/database/${page}-${itemsPerPage}-nhentai.json`,
 			JSON.stringify(json)
