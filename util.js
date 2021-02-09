@@ -30,35 +30,27 @@ const get_database = (start, stop) => {
 
 	return database;
 };
+
+/**
+ *
+ * @param {Array} database Array of Objects containing a tags property contatining an Array of String tags
+ */
+
 const gen_ref_tags = async (database) => {
 	let ref_tags;
-	let num_fav;
-	try {
-		ref_tags = require("./json/ref_tags.json");
-		num_fav = ref_tags.num_fav;
-		ref_tags = ref_tags.list;
 
-		if (num_fav !== database.length) {
-			throw new Error("Length different");
-		}
-	} catch (err) {
-		ref_tags = [];
-		for (let i = 0; i < database.length; i++) {
-			const book_tags = database[i].tags;
-			for (let j = 0; j < book_tags.length; j++) {
-				const tag = book_tags[j];
-				if (!ref_tags.includes(tag)) {
-					ref_tags.push(tag);
-				}
+	ref_tags = [];
+	for (let i = 0; i < database.length; i++) {
+		const tags = database[i].tags;
+		for (let j = 0; j < tags.length; j++) {
+			const tag = tags[j];
+			if (!ref_tags.includes(tag)) {
+				ref_tags.push(tag);
 			}
 		}
-		// ref_tags.sort();
-		ref_tags = [...new Set(ref_tags)];
-		num_fav = database.length;
-		console.log("created ref tags");
-		const json = { list: [...ref_tags], num_fav };
-		await fs.writeFile("./json/ref_tags.json", JSON.stringify(json));
 	}
+	console.log("created ref tags");
+
 	return ref_tags;
 };
 module.exports = { sleep, combination, gen_ref_tags, get_database };

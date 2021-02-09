@@ -9,7 +9,7 @@
 				class=" project-img" loading='lazy' alt="<%= id%>">
 			<div>
 				<p><b>ID:</b>
-					<a class='tag' href=" /recommend?id=<%=id%>">
+					<a class='tag' href=" /?id=<%=id%>">
 						<%= id%>
 					</a>
 				</p>
@@ -17,20 +17,20 @@
 					<%= score.toFixed(3) %>
 				</p>
 				<p><b>Categories:</b>
-					<% categories.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+					<% categories.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</p>
 				<p><b>Languages:</b>
-					<% languages.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+					<% languages.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</p>
 				<%if(parodies.length !==0){ %>
 					<p><b>Parodies:</b>
-						<% parodies.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+						<% parodies.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 								<%= tag%>
 							</a>
 							<%})%>
@@ -38,21 +38,21 @@
 					<%} %>
 						<%if(characters.length !==0){ %>
 							<p><b>Characters:</b>
-								<% characters.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+								<% characters.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 										<%= tag%>
 									</a>
 									<%})%>
 							</p>
 							<%} %>
 								<p><b>Artists:</b>
-									<% artists.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+									<% artists.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 											<%= tag%>
 										</a>
 										<%})%>
 								</p>
 								<%if(groups.length !==0){ %>
 									<p><b>Groups:</b>
-										<% groups.forEach(tag=> {%> <a class='tag' href=" /recommend?tag=<%=tag%>">
+										<% groups.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 												<%= tag%>
 											</a>
 											<%})%>
@@ -69,8 +69,7 @@
 										</p>
 										<p><b>Tags:</b></p>
 										<div class='tags'>
-											<% basic_tags.forEach(tag=> {%> <a class='tag'
-													href=" /recommend?tag=<%=tag%>">
+											<% basic_tags.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 													<%= tag%>
 												</a>
 												<%})%>

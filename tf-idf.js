@@ -1,8 +1,8 @@
 const fs = require("fs").promises;
+const math = require("mathjs");
 
 const TF = (book_tags, ref_tags) => {
-	let TF_Vector = Array(ref_tags.length);
-	TF_Vector.fill(0);
+	let TF_Vector = Array(ref_tags.length).fill(0);
 
 	const total_num_tags_in_doc = book_tags.length;
 	for (let i = 0; i < total_num_tags_in_doc; i++) {
@@ -12,6 +12,7 @@ const TF = (book_tags, ref_tags) => {
 		const index = ref_tags.indexOf(tag);
 		if (index !== -1) {
 			TF_Vector[index] = freq_tag_in_doc / total_num_tags_in_doc;
+			// TF_Vector[index] = 1;
 		}
 	}
 	return TF_Vector;
@@ -20,9 +21,7 @@ const TF = (book_tags, ref_tags) => {
 const count_docs_with_tag = (tag, all_books) => {
 	let count = 0;
 	for (let i = 0; i < all_books.length; i++) {
-		const book = all_books[i];
-
-		const book_tags = book.tags;
+		const book_tags = all_books[i].tags;
 		const book_tags_length = book_tags.length;
 		for (let j = 0; j < book_tags_length; j++) {
 			if (tag === book_tags[j]) {
@@ -43,7 +42,7 @@ const findItemIndex = (array, item) => {
 	}
 	return -1;
 };
-const gen_count_books_tag = (all_books, ref_tags) => {
+const gen_tag_count = (all_books, ref_tags) => {
 	let count_books_tag = [];
 	const ref_tags_length = ref_tags.length;
 	for (let i = 0; i < ref_tags_length; i++) {
@@ -63,8 +62,9 @@ const IDF = (all_books, book_tags, ref_tags, count_books_tag) => {
 		const tag = book_tags[i];
 		let index = findItemIndex(ref_tags, tag);
 		if (index !== -1) {
-			let num_docs_with_tag = count_books_tag[i];
-			IDF_Vector[index] = Math.log(total_num_docs / num_docs_with_tag);
+			let num_docs_with_tag = count_books_tag[index];
+			IDF_Vector[index] =
+				1 + Math.log(total_num_docs / (1 + num_docs_with_tag));
 		}
 	}
 	return IDF_Vector;
@@ -79,19 +79,19 @@ const multiply_TF_IDF = (TF_Vector, IDF_Vector) => {
 	return TF_IDF_Vector;
 };
 
-const get_count_books_tag = async (all_books, ref_tags, name) => {
+const get_tag_count = async (all_books, ref_tags, name) => {
 	let count_books_tag;
 	try {
-		count_books_tag = require(`../json/${name}_count_books_tag.json`).list;
+		count_books_tag = require(`../json/${name}_tag_count.json`).list;
 		if (count_books_tag.length !== ref_tags.length) {
 			throw new Error("Length different");
 		}
 	} catch (err) {
-		count_books_tag = gen_count_books_tag(all_books, ref_tags);
+		count_books_tag = gen_tag_count(all_books, ref_tags);
 		console.log("created TF-IDF database vectors");
 		const json = { list: [...count_books_tag] };
 		await fs.writeFile(
-			`./json/${name}_count_books_tag.json`,
+			`./json/${name}_tag_count.json`,
 			JSON.stringify(json)
 		);
 	}
@@ -99,24 +99,18 @@ const get_count_books_tag = async (all_books, ref_tags, name) => {
 };
 
 const TF_IDF = async (all_books, ref_tags, name) => {
-	const count_books_tag = await get_count_books_tag(
-		all_books,
-		ref_tags,
-		name
-	);
+	const count_books_tag = await get_tag_count(all_books, ref_tags, name);
 
 	const all_TF_IDF_Vectors = [];
-	const total = all_books.length;
 
 	let all_books_length = all_books.length;
 	for (let i = 0; i < all_books_length; i++) {
-		const book = all_books[i];
-		const book_tags = book.tags;
+		const book_tags = all_books[i].tags;
 		const TF_Vector = TF(book_tags, ref_tags);
 		const IDF_Vector = IDF(all_books, book_tags, ref_tags, count_books_tag);
-		let TF_IDF_Vector = multiply_TF_IDF(TF_Vector, IDF_Vector);
+		const TF_IDF_Vector = multiply_TF_IDF(TF_Vector, IDF_Vector);
 		all_TF_IDF_Vectors.push(TF_IDF_Vector);
-		console.log(`Created ${i + 1}/${total}`);
+		// console.log(`Created ${i + 1}/${all_books_length}`);
 	}
 
 	return all_TF_IDF_Vectors;
