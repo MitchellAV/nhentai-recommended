@@ -8,10 +8,7 @@ const { scrapeThumbnails } = require("../nhentai.js");
 const {
 	filter_recommended,
 	get_recommended,
-	get_TF_IDF_Vectors,
-	get_Database_TF_IDF_Vectors,
-
-	avg_vectors
+	get_TF_IDF_Vectors
 } = require("../recommendation_engine.js");
 
 let favorites = require("../json/personal/favorites.json").favorites;
@@ -56,6 +53,9 @@ router.get("/personal", async (req, res) => {
 		num_favorites: -1,
 		tags: search_list
 	};
+
+	// recommended_list = recommended_list.filter((item) => {return });
+
 	const filtered_recommended_list = filter_recommended(
 		recommended_list,
 		ignore_list,
@@ -130,6 +130,38 @@ router.get("/", async (req, res) => {
 		num_favorites: -1,
 		tags: search_list
 	};
+
+	let only_known_artists = req.query.only_known_artists;
+
+	if (only_known_artists) {
+		const fav_artists = [];
+		for (let i = 0; i < favorites.length; i++) {
+			const tags = favorites[i].tags;
+			for (let j = 0; j < tags.length; j++) {
+				const type = tags[j].type;
+				const tag = tags[j].name;
+				if (type == "artist") {
+					if (!fav_artists.includes(tag)) {
+						fav_artists.push(tag);
+					}
+				}
+			}
+		}
+
+		const filter_artist_recommended = [];
+		for (let i = 0; i < recommended_list.length; i++) {
+			const book = recommended_list[i];
+			const artists = book.artists;
+			for (let j = 0; j < artists.length; j++) {
+				const artist = artists[j];
+				if (fav_artists.includes(artist)) {
+					filter_artist_recommended.push(book);
+					break;
+				}
+			}
+		}
+		recommended_list = filter_artist_recommended;
+	}
 	let filtered_recommended_list = filter_recommended(
 		recommended_list,
 		ignore_list,
