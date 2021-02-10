@@ -3,12 +3,14 @@ const router = express.Router();
 const math = require("mathjs");
 
 const { cleanDatabase } = require("../filter");
-const { get_database, gen_ref_tags } = require("../util");
 const { scrapeThumbnails } = require("../nhentai.js");
 const {
 	filter_recommended,
 	get_recommended,
-	get_TF_IDF_Vectors
+	get_TF_IDF_Vectors,
+	get_database,
+	gen_ref_tags,
+	get_tag_count
 } = require("../recommendation_engine.js");
 
 let favorites = require("../json/personal/favorites.json").favorites;
@@ -43,13 +45,18 @@ router.get("/personal", async (req, res) => {
 	// Array of Strings
 	let ref_tags = await gen_ref_tags(filtered_fav);
 	ref_tags = ref_tags.filter((tag) => !common_tags.includes(tag));
+	const count_books_tag = await get_tag_count(
+		filtered_fav,
+		ref_tags,
+		"favorites"
+	);
 
 	// Sparse 2D Array of Vectors with TFIDF scores from tags
 	let favorites_TF_IDF_Vectors = await get_TF_IDF_Vectors(
 		filtered_fav,
 		ref_tags,
-		"favorites_TFIDF",
-		"favorites"
+		count_books_tag,
+		"favorites_TFIDF"
 	);
 	// If rating multiply each vector by rating here
 
@@ -81,8 +88,7 @@ router.get("/personal", async (req, res) => {
 		ignore_list,
 		filterlist,
 		blacklist,
-		100,
-		"database"
+		100
 	);
 
 	await scrapeThumbnails(filtered_recommended_list);
@@ -100,12 +106,17 @@ router.get("/", async (req, res) => {
 
 	ref_tags = ref_tags.filter((tag) => !common_tags.includes(tag));
 	// ref_tags = gen_ref_tags(filtered_database);
+	let count_books_tag = await get_tag_count(
+		filtered_database,
+		ref_tags,
+		"database"
+	);
 
 	let database_TF_IDF_Vectors = await get_TF_IDF_Vectors(
 		filtered_database,
 		ref_tags,
-		"database_TFIDF",
-		"database"
+		count_books_tag,
+		"database_TFIDF"
 	);
 
 	let search_vector;
@@ -121,12 +132,16 @@ router.get("/", async (req, res) => {
 		}
 	} else {
 		search_vector_name = "user";
-
+		count_books_tag = await get_tag_count(
+			filtered_fav,
+			ref_tags,
+			"favorites"
+		);
 		let favorites_TF_IDF_Vectors = await get_TF_IDF_Vectors(
 			filtered_fav,
 			ref_tags,
-			"favorites_TFIDF",
-			"favorites"
+			count_books_tag,
+			"favorites_TFIDF"
 		);
 
 		search_vector = math.multiply(
@@ -188,14 +203,8 @@ router.get("/", async (req, res) => {
 		ignore_list,
 		filterlist,
 		blacklist,
-		100,
-		"database"
+		100
 	);
-
-	// filtered_recommended_list = filtered_recommended_list.filter((book) => {
-	// 	console.log(book.score);
-	// 	return parseInt(book.score) <= 0.8;
-	// });
 
 	await scrapeThumbnails(filtered_recommended_list);
 

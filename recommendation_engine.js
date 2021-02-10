@@ -1,8 +1,47 @@
 const math = require("mathjs");
 const fs = require("fs").promises;
+const fsSync = require("fs");
+
 const { filterDatabase } = require("./filter");
 const { TF_IDF } = require("./tf-idf");
 
+const get_database = (start, stop) => {
+	const files = fsSync.readdirSync("./json/database/");
+	let database = [];
+	stop = stop > files.length ? files.length : stop;
+
+	for (let i = start; i < stop; i++) {
+		const file = files[i];
+		console.log(i, file);
+		let datapart = require(`./json/database/${file}`).posts;
+		database = [...database, ...datapart];
+	}
+
+	return database;
+};
+
+/**
+ *
+ * @param {Array} database Array of Objects containing a tags property contatining an Array of String tags
+ */
+
+const gen_ref_tags = async (database) => {
+	let ref_tags;
+
+	ref_tags = [];
+	for (let i = 0; i < database.length; i++) {
+		const tags = database[i].tags;
+		for (let j = 0; j < tags.length; j++) {
+			const tag = tags[j];
+			if (!ref_tags.includes(tag)) {
+				ref_tags.push(tag);
+			}
+		}
+	}
+	console.log("created ref tags");
+
+	return ref_tags;
+};
 const avg_vectors = (vectors) => {
 	let sum_vectors = Array(vectors.size()[0]).fill(0);
 	vectors = vectors.toArray();
@@ -43,8 +82,8 @@ const is_in_array = (array, target) => {
 const get_TF_IDF_Vectors = async (
 	filtered_database,
 	ref_tags,
-	filename,
-	vector_name
+	count_books_tag,
+	filename
 ) => {
 	let database_vectors;
 	try {
@@ -60,9 +99,9 @@ const get_TF_IDF_Vectors = async (
 		database_vectors = await TF_IDF(
 			filtered_database,
 			ref_tags,
-			vector_name
+			count_books_tag
 		);
-		console.log(`created ${vector_name} TF-IDF database vectors`);
+		console.log(`created ${filename} database vectors`);
 		const json = { list: [...database_vectors] };
 		await fs.writeFile(`./json/${filename}.json`, JSON.stringify(json));
 	}
@@ -129,20 +168,33 @@ const filter_recommended = (
 	ignore_list,
 	filterlist,
 	blacklist,
-	num_results,
-	name
+	num_results
 ) => {
 	// order rankings
 	recommended_list.sort((a, b) => {
-		return b.score * b.num_favorites - a.score * a.num_favorites;
+		return a.score - b.score;
+	});
+	recommended_list.forEach((book, i) => {
+		book.score_rank = i + 1;
+	});
+	recommended_list.sort((a, b) => {
+		return a.num_favorites - b.num_favorites;
+	});
+	recommended_list.forEach((book, i) => {
+		book.fav_rank = i + 1;
+	});
+	recommended_list.sort((a, b) => {
+		return b.score_rank + b.fav_rank - (a.score_rank + a.fav_rank);
 	});
 	// filter rankings
+
+	// recommended_list.sort((a, b) => {
+	// 	return b.score - a.score;
+	// });
 	// remove favorited post
-	if (name == "database") {
-		recommended_list = recommended_list.filter(
-			(book) => !is_in_array(ignore_list, book.title)
-		);
-	}
+	recommended_list = recommended_list.filter(
+		(book) => !is_in_array(ignore_list, book.title)
+	);
 
 	recommended_list = filterDatabase(recommended_list, filterlist, blacklist);
 	// recommended_list = recommended_list.filter(
@@ -151,11 +203,55 @@ const filter_recommended = (
 	// return list of
 	return recommended_list.slice(0, num_results);
 };
+const count_docs_with_tag = (tag, all_books) => {
+	let count = 0;
+	for (let i = 0; i < all_books.length; i++) {
+		const book_tags = all_books[i].tags;
+		const book_tags_length = book_tags.length;
+		for (let j = 0; j < book_tags_length; j++) {
+			if (tag === book_tags[j]) {
+				count++;
+				break;
+			}
+		}
+	}
+	return count;
+};
+const gen_tag_count = (all_books, ref_tags) => {
+	let count_books_tag = [];
+	const ref_tags_length = ref_tags.length;
+	for (let i = 0; i < ref_tags_length; i++) {
+		const tag = ref_tags[i];
+		const count = count_docs_with_tag(tag, all_books);
+		count_books_tag.push(count);
+	}
+	return count_books_tag;
+};
+const get_tag_count = async (all_books, ref_tags, name) => {
+	let count_books_tag;
+	try {
+		count_books_tag = require(`../json/${name}_tag_count.json`).list;
+		if (count_books_tag.length !== ref_tags.length) {
+			throw new Error("Length different");
+		}
+	} catch (err) {
+		count_books_tag = gen_tag_count(all_books, ref_tags);
+		console.log("created TF-IDF database vectors");
+		const json = { list: [...count_books_tag] };
+		await fs.writeFile(
+			`./json/${name}_tag_count.json`,
+			JSON.stringify(json)
+		);
+	}
+	return count_books_tag;
+};
 
 module.exports = {
 	filter_recommended,
 	get_recommended,
 	get_TF_IDF_Vectors,
-
-	avg_vectors
+	get_database,
+	avg_vectors,
+	gen_ref_tags,
+	get_tag_count
 };

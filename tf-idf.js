@@ -1,5 +1,3 @@
-const fs = require("fs").promises;
-
 const TF = (book_tags, ref_tags) => {
 	let TF_Vector = Array(ref_tags.length).fill(0);
 
@@ -17,21 +15,6 @@ const TF = (book_tags, ref_tags) => {
 	return TF_Vector;
 };
 
-const count_docs_with_tag = (tag, all_books) => {
-	let count = 0;
-	for (let i = 0; i < all_books.length; i++) {
-		const book_tags = all_books[i].tags;
-		const book_tags_length = book_tags.length;
-		for (let j = 0; j < book_tags_length; j++) {
-			if (tag === book_tags[j]) {
-				count++;
-				break;
-			}
-		}
-	}
-	return count;
-};
-
 const findItemIndex = (array, item) => {
 	var arrayLen = array.length;
 	for (var i = 0; i < arrayLen; i++) {
@@ -40,16 +23,6 @@ const findItemIndex = (array, item) => {
 		}
 	}
 	return -1;
-};
-const gen_tag_count = (all_books, ref_tags) => {
-	let count_books_tag = [];
-	const ref_tags_length = ref_tags.length;
-	for (let i = 0; i < ref_tags_length; i++) {
-		const tag = ref_tags[i];
-		const count = count_docs_with_tag(tag, all_books);
-		count_books_tag.push(count);
-	}
-	return count_books_tag;
 };
 
 const IDF = (all_books, book_tags, ref_tags, count_books_tag) => {
@@ -78,28 +51,7 @@ const multiply_TF_IDF = (TF_Vector, IDF_Vector) => {
 	return TF_IDF_Vector;
 };
 
-const get_tag_count = async (all_books, ref_tags, name) => {
-	let count_books_tag;
-	try {
-		count_books_tag = require(`../json/${name}_tag_count.json`).list;
-		if (count_books_tag.length !== ref_tags.length) {
-			throw new Error("Length different");
-		}
-	} catch (err) {
-		count_books_tag = gen_tag_count(all_books, ref_tags);
-		console.log("created TF-IDF database vectors");
-		const json = { list: [...count_books_tag] };
-		await fs.writeFile(
-			`./json/${name}_tag_count.json`,
-			JSON.stringify(json)
-		);
-	}
-	return count_books_tag;
-};
-
-const TF_IDF = async (all_books, ref_tags, name) => {
-	const count_books_tag = await get_tag_count(all_books, ref_tags, name);
-
+const TF_IDF = async (all_books, ref_tags, count_books_tag) => {
 	const all_TF_IDF_Vectors = [];
 
 	let all_books_length = all_books.length;
