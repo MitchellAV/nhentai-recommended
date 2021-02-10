@@ -99,11 +99,11 @@ router.get("/favorites", async (req, res) => {
 			}
 			pagenum++;
 		}
+		await browser.close();
 		await fs.writeFile(
 			"./json/personal/favorites.json",
 			JSON.stringify(json)
 		);
-
 		await page.screenshot({
 			fullPage: true,
 			path: `./test.png`

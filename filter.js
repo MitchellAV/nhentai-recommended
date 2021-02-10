@@ -1,4 +1,3 @@
-const { combination } = require("./util");
 const assign_popularity = (num_favorites) => {
 	let tag = "";
 	if (num_favorites <= 2000) {
@@ -46,7 +45,7 @@ const filterDatabase = (input_array, searchlist, blacklist = []) => {
 		let skip = false;
 		let newfilter = { ...searchlist };
 
-		const { id, title, num_favorites, num_pages, upload_date, tags } = book;
+		const { num_favorites, num_pages, tags } = book;
 
 		if (!skip) {
 			let num_pages_tag = assign_length(num_pages);
@@ -134,12 +133,6 @@ const cleanDatabase = (input_array) => {
 			tags: [],
 			score: 0
 		};
-		// let num_pages_tag = assign_length(num_pages);
-		// filteredBook.basic_tags.push(num_pages_tag);
-		// filteredBook.tags.push(num_pages_tag);
-		// let num_favorites_tag = assign_popularity(num_favorites);
-		// filteredBook.basic_tags.push(num_favorites_tag);
-		// filteredBook.tags.push(num_favorites_tag);
 
 		for (let i = 0; i < tags.length; i++) {
 			const { name, type } = tags[i];
@@ -171,10 +164,7 @@ const cleanDatabase = (input_array) => {
 			filteredBook.tags.push(name);
 		}
 
-		filteredBook.tags = [
-			...filteredBook.tags
-			// ...combination(filteredBook.tags)
-		];
+		filteredBook.tags = [...filteredBook.tags];
 
 		output_array.push(filteredBook);
 	});

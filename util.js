@@ -1,5 +1,4 @@
 const fsSync = require("fs");
-const fs = require("fs").promises;
 
 const sleep = (ms) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));

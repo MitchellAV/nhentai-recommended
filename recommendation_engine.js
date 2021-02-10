@@ -22,7 +22,10 @@ const cosine_similarity = (vectorA, vectorB) => {
 	const a_norm = math.hypot(vectorA);
 	const b_norm = math.hypot(vectorB);
 	const dot_result = math.dot(vectorA, vectorB);
-	const score = dot_result / (a_norm * b_norm);
+	let score = dot_result / (a_norm * b_norm);
+	if (isNaN(score)) {
+		score = 0;
+	}
 	return score;
 };
 
@@ -131,7 +134,7 @@ const filter_recommended = (
 ) => {
 	// order rankings
 	recommended_list.sort((a, b) => {
-		return b.score - a.score;
+		return b.score * b.num_favorites - a.score * a.num_favorites;
 	});
 	// filter rankings
 	// remove favorited post

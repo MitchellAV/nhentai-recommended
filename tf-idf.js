@@ -1,5 +1,4 @@
 const fs = require("fs").promises;
-const math = require("mathjs");
 
 const TF = (book_tags, ref_tags) => {
 	let TF_Vector = Array(ref_tags.length).fill(0);
@@ -64,7 +63,7 @@ const IDF = (all_books, book_tags, ref_tags, count_books_tag) => {
 		if (index !== -1) {
 			let num_docs_with_tag = count_books_tag[index];
 			IDF_Vector[index] =
-				1 + Math.log(total_num_docs / (1 + num_docs_with_tag));
+				1 + Math.log((1 + total_num_docs) / (1 + num_docs_with_tag));
 		}
 	}
 	return IDF_Vector;

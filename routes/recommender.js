@@ -13,6 +13,25 @@ const {
 
 let favorites = require("../json/personal/favorites.json").favorites;
 let blacklist = require("../json/personal/blacklist.json").list;
+let common_tags = [
+	"japanese",
+	"english",
+	"chinese",
+	"manga",
+	"translated",
+	"doujinshi"
+	// "big breasts",
+	// "sole female",
+	// "group",
+	// "lolicon",
+	// "sole male",
+	// "anal",
+	// "stockings",
+	// "schoolgirl uniform",
+	// "glasses",
+	// "nakadashi",
+	// "blowjob"
+];
 const database = [...get_database(0, Infinity)];
 
 let filtered_fav = cleanDatabase(favorites);
@@ -23,6 +42,8 @@ console.log("created filtered database");
 router.get("/personal", async (req, res) => {
 	// Array of Strings
 	let ref_tags = await gen_ref_tags(filtered_fav);
+	ref_tags = ref_tags.filter((tag) => !common_tags.includes(tag));
+
 	// Sparse 2D Array of Vectors with TFIDF scores from tags
 	let favorites_TF_IDF_Vectors = await get_TF_IDF_Vectors(
 		filtered_fav,
@@ -47,7 +68,6 @@ router.get("/personal", async (req, res) => {
 	let search = req.query.tag;
 	let search_list = [];
 	search ? (search_list = [search]) : (search_list = []);
-	blacklist = [];
 	const filterlist = {
 		num_pages: -1,
 		num_favorites: -1,
@@ -78,6 +98,7 @@ router.get("/", async (req, res) => {
 
 	let ref_tags = await gen_ref_tags(filtered_fav);
 
+	ref_tags = ref_tags.filter((tag) => !common_tags.includes(tag));
 	// ref_tags = gen_ref_tags(filtered_database);
 
 	let database_TF_IDF_Vectors = await get_TF_IDF_Vectors(
@@ -126,7 +147,7 @@ router.get("/", async (req, res) => {
 	let search_list = [];
 	search ? (search_list = [search]) : (search_list = []);
 	const filterlist = {
-		num_pages: -1,
+		num_pages: 101,
 		num_favorites: -1,
 		tags: search_list
 	};
